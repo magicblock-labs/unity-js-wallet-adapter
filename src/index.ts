@@ -96,6 +96,7 @@ declare global {
 interface WalletAdapterLibrary {
     connectWallet:  (walletName: string) => Promise<any>;
     signTransaction:  (walletName: string, transactionStr: string) => Promise<any>;
+    getWallets: () => string;
 }
 
 function getWalletAdapterByName(walletName) {
@@ -127,11 +128,24 @@ async function signTransactionWallet(walletName, transactionStr) {
     return base64str;
 }
 
-
+function getWallets() {
+    const walletData = wallets.map(wallet => {
+        return {
+            name: wallet.name,
+            installed: wallet.readyState == WalletReadyState.Installed,
+            canSign: 'signMessage' in wallet
+        }
+    }
+    );
+    console.log('walletData');
+    console.log(walletData);
+    return JSON.stringify({wallets:walletData});
+}
 
 const walletAdapterLib: WalletAdapterLibrary = {
     connectWallet: connectWallet,
-    signTransaction: signTransactionWallet
+    signTransaction: signTransactionWallet,
+    getWallets: getWallets
 };
 
-window.walletAdapterLib = walletAdapterLib
+window.walletAdapterLib = walletAdapterLib;
