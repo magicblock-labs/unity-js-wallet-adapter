@@ -1,29 +1,23 @@
 import {
     WalletNotReadyError,
     WalletReadyState,
+    isWalletAdapterCompatibleStandardWallet,
 } from '@solana/wallet-adapter-base';
+import {
+    StandardWalletAdapter,
+  } from "@solana/wallet-standard-wallet-adapter-base";
 import { 
     PublicKey ,
     Transaction
 } from '@solana/web3.js';
+import { getWallets } from "@wallet-standard/app";
+import type { Wallet } from "@wallet-standard/base";
 
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 
 
+let wallets : Array<StandardWalletAdapter> = [];
 
-let wallets = [
-    new PhantomWalletAdapter(),
-]
-
-wallets.forEach(wallet => {
-    wallet.on('connect', () => {
-        console.log('Wallet connected: [' + wallet.name + '], address: [' + wallet.publicKey + ']');
-    });
-
-    wallet.on('disconnect', () => {
-        console.log('Wallet disconnected: [' + wallet.name + ']');
-    });
-});
+initWallets();
 
 
 async function connect(adapter): Promise<any> {
@@ -128,7 +122,28 @@ async function signTransactionWallet(walletName, transactionStr) {
     return base64str;
 }
 
-function getWallets() {
+
+function wrapWalletsInAdapters(
+    wallets: ReadonlyArray<Wallet>
+  ): Array<StandardWalletAdapter> {
+    return wallets
+      .filter(isWalletAdapterCompatibleStandardWallet )
+      .map((wallet) => new StandardWalletAdapter({ wallet }));
+  }
+
+  function initWallets() {
+    console.log('initWallets');
+    const { get, on } = getWallets();
+    const walletsStandard = get();
+    wallets = wrapWalletsInAdapters(walletsStandard);
+    console.log('wallets: ' + wallets.length);
+    console.log(wallets);
+  }
+
+function getWalletsData() {
+    if (wallets.length === 0) {
+        initWallets();
+    }
     const walletData = wallets.map(wallet => {
         return {
             name: wallet.name,
@@ -145,7 +160,7 @@ function getWallets() {
 const walletAdapterLib: WalletAdapterLibrary = {
     connectWallet: connectWallet,
     signTransaction: signTransactionWallet,
-    getWallets: getWallets
+    getWallets: getWalletsData
 };
 
 window.walletAdapterLib = walletAdapterLib;
