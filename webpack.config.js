@@ -6,7 +6,7 @@ module.exports = {
   mode: 'production',
   entry: ['./src/index.ts'],
   output: {
-    path: path.resolve(__dirname, 'build'),
+    path: path.resolve(__dirname, 'dist'),
     filename: 'wallet-adapter-lib.js',
   },
   plugins: [
