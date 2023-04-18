@@ -148,7 +148,6 @@ function getWalletsData() {
         return {
             name: wallet.name,
             installed: wallet.readyState == WalletReadyState.Installed,
-            canSign: 'signMessage' in wallet
         }
     }
     );
