@@ -64,6 +64,26 @@ async function signTransaction(adapter, transactionStr): Promise<any> {
     }
 }
 
+async function signMessage(adapter, messageStr): Promise<Uint8Array> {
+    if (!adapter || !adapter.connected){
+        console.error('Not connected');
+        return;
+    }
+
+    try {
+        if (adapter && 'signMessage' in adapter){
+            const message = new TextEncoder().encode(messageStr);
+            const signature: Uint8Array = await adapter.signMessage(message);
+            return signature
+
+        } else {
+            console.error('Signing not supported with this wallet');
+        }  
+    } catch(error){
+        console.log(error);
+    }
+}
+
 
 declare global {
     interface Window {
@@ -76,6 +96,7 @@ interface WalletAdapterLibrary {
     connectWallet:  (walletName: string) => Promise<any>;
     signTransaction:  (walletName: string, transactionStr: string) => Promise<any>;
     getWallets: () => string;
+    signMessage: (walletName: string, messageStr: string) => Promise<any>;
 }
 
 function getWalletAdapterByName(walletName) {
@@ -97,6 +118,12 @@ async function connectWallet(walletName) {
 async function signTransactionWallet(walletName, transactionStr) {
     let adapter = getWalletAdapterByName(walletName);
     const base64str = await signTransaction(adapter, transactionStr);
+    return base64str;
+}
+
+async function signMessageWallet(walletName, messageStr) {
+    let adapter = getWalletAdapterByName(walletName);
+    const base64str = await signMessage(adapter, messageStr);
     return base64str;
 }
 
@@ -133,7 +160,9 @@ function getWalletsData() {
 const walletAdapterLib: WalletAdapterLibrary = {
     connectWallet: connectWallet,
     signTransaction: signTransactionWallet,
-    getWallets: getWalletsData
+    getWallets: getWalletsData,
+    signMessage: signMessageWallet,
+    
 };
 
 window.walletAdapterLib = walletAdapterLib;
