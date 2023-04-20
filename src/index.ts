@@ -64,8 +64,7 @@ async function signTransaction(adapter, transactionStr): Promise<any> {
     }
 }
 
-async function signMessage(adapter, messageStr): Promise<any> {
-    console.log("signMessage");
+async function signMessage(adapter, messageStr): Promise<Uint8Array> {
     if (!adapter || !adapter.connected){
         console.error('Not connected');
         return;
@@ -73,17 +72,9 @@ async function signMessage(adapter, messageStr): Promise<any> {
 
     try {
         if (adapter && 'signMessage' in adapter){
-            console.log("messageStr ->" + messageStr);
             const message = new TextEncoder().encode(messageStr);
-            console.log("message");
-            console.log(message);
-            const signature = await adapter.signMessage(message);
-            console.log("signature");
-            console.log(signature);
-            const base64Signature = Buffer.from(signature).toString('base64');
-            console.log("base64Signature");
-            console.log(base64Signature);
-            return base64Signature
+            const signature: Uint8Array = await adapter.signMessage(message);
+            return signature
 
         } else {
             console.error('Signing not supported with this wallet');
@@ -131,7 +122,6 @@ async function signTransactionWallet(walletName, transactionStr) {
 }
 
 async function signMessageWallet(walletName, messageStr) {
-    console.log("signMessageWallet");
     let adapter = getWalletAdapterByName(walletName);
     const base64str = await signMessage(adapter, messageStr);
     return base64str;
