@@ -1,4 +1,5 @@
 import {
+    BaseMessageSignerWalletAdapter,
     WalletNotReadyError,
     WalletReadyState,
     isWalletAdapterCompatibleStandardWallet,
@@ -11,12 +12,16 @@ import {
 } from '@solana/web3.js';
 import { getWallets } from "@wallet-standard/app";
 import type { Wallet } from "@wallet-standard/base";
+import { PhantomWalletAdapter, SolflareWalletAdapter  } from '@solana/wallet-adapter-wallets';
 
 
+import { Canvg } from "canvg";
 
-let wallets : Array<StandardWalletAdapter> = [];
 
-initWallets();
+let walletAdapters : Array<StandardWalletAdapter | BaseMessageSignerWalletAdapter> = [];
+
+
+const canvas: HTMLCanvasElement = document.createElement('canvas');
 
 
 async function connect(adapter): Promise<any> {
@@ -95,16 +100,22 @@ declare global {
 interface WalletAdapterLibrary {
     connectWallet:  (walletName: string) => Promise<any>;
     signTransaction:  (walletName: string, transactionStr: string) => Promise<any>;
-    getWallets: () => string;
+    getWallets: () => Promise<any>;
     signMessage: (walletName: string, messageStr: string) => Promise<any>;
 }
 
+interface WalletData {
+    name: string;
+    installed: boolean;
+    icon: string;
+}
+
 function getWalletAdapterByName(walletName) {
-    let walletIndex = wallets.findIndex(x => x.name === walletName);
+    let walletIndex = walletAdapters.findIndex(x => x.name === walletName);
     if (walletIndex === -1) {
         return null;
     }
-    return wallets[walletIndex];
+    return walletAdapters[walletIndex];
 }
 
 async function connectWallet(walletName) {
@@ -137,24 +148,49 @@ function wrapWalletsInAdapters(
   }
 
   function initWallets() {
+    canvas.style.visibility = 'hidden';
     const { get, on } = getWallets();
     const walletsStandard = get();
-    wallets = wrapWalletsInAdapters(walletsStandard);
-    console.log(wallets);
+    walletAdapters = wrapWalletsInAdapters(walletsStandard);
+    // Add default wallet adapters
+    walletAdapters.push(new PhantomWalletAdapter(), new SolflareWalletAdapter());
   }
 
-function getWalletsData() {
-    if (wallets.length === 0) {
-        initWallets();
+async function getWalletIconPng(iconDataUrl) {
+    let iconDataUrlPng: string;
+    // When the icon format is SVG, we need to convert it to PNG
+    if (iconDataUrl.startsWith('data:image/svg+xml')) {
+        const context = canvas.getContext('2d');
+        const svg = await Canvg.from(
+            context,
+            iconDataUrl
+          );
+        await svg.render();
+        iconDataUrlPng = canvas.toDataURL();
     }
-    const walletData = wallets.map(wallet => {
-        return {
+    else {
+        iconDataUrlPng = iconDataUrl;
+    }
+    // Remove Encoding prefix
+    return iconDataUrlPng.replace(/^data:image\/\w+;base64,/, '');
+}
+
+
+
+
+
+async function getWalletsData() {
+    initWallets();
+    let walletsData: Array<WalletData> = [];
+    for (let wallet of walletAdapters) {
+        let icon = await getWalletIconPng(wallet.icon);
+        walletsData.push({
             name: wallet.name,
             installed: wallet.readyState == WalletReadyState.Installed,
-        }
+            icon: icon
+        });
     }
-    );
-    return JSON.stringify({wallets:walletData});
+    return JSON.stringify({wallets:walletsData});
 }
 
 const walletAdapterLib: WalletAdapterLibrary = {
