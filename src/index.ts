@@ -1,5 +1,5 @@
 import {
-    BaseMessageSignerWalletAdapter,
+    Adapter,
     WalletNotReadyError,
     WalletReadyState,
     isWalletAdapterCompatibleStandardWallet,
@@ -17,11 +17,31 @@ import { PhantomWalletAdapter, SolflareWalletAdapter  } from '@solana/wallet-ada
 
 import { Canvg } from "canvg";
 
+const defaultWalletAdapters: Array<Adapter> = [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+];
 
-let walletAdapters : Array<StandardWalletAdapter | BaseMessageSignerWalletAdapter> = [];
+const { get, on } = getWallets();
+let walletAdapters : Array<Adapter> = getWalletAdapters();
+
+function getWalletAdapters () : Array<Adapter> {
+    let standardAdapters = wrapWalletsInAdapters(get());
+    let adapters =  defaultWalletAdapters.filter((adapter) => !standardAdapters.some((wallet) => wallet.name === adapter.name));
+    return [...adapters, ...standardAdapters] as Array<Adapter>;
+}
+
+on('register', (...wallets) => {
+    walletAdapters = [ ...walletAdapters, ...wrapWalletsInAdapters(wallets) ];
+});
+on('unregister', (...wallets) => {
+    walletAdapters = walletAdapters.filter((adapter) => wallets.some((wallet) => wallet.name === adapter.name));
+});
+
 
 
 const canvas: HTMLCanvasElement = document.createElement('canvas');
+canvas.style.visibility = 'hidden';
 
 
 async function connect(adapter): Promise<any> {
@@ -140,21 +160,13 @@ async function signMessageWallet(walletName, messageStr) {
 
 
 function wrapWalletsInAdapters(
-    wallets: ReadonlyArray<Wallet>
+    wallets: ReadonlyArray<Wallet>,
   ): Array<StandardWalletAdapter> {
     return wallets
-      .filter(isWalletAdapterCompatibleStandardWallet )
-      .map((wallet) => new StandardWalletAdapter({ wallet }));
-  }
-
-  function initWallets() {
-    canvas.style.visibility = 'hidden';
-    const { get, on } = getWallets();
-    const walletsStandard = get();
-    walletAdapters = wrapWalletsInAdapters(walletsStandard);
-    // Add default wallet adapters
-    walletAdapters.push(new PhantomWalletAdapter(), new SolflareWalletAdapter());
-  }
+        .filter(isWalletAdapterCompatibleStandardWallet)
+        .map((wallet) => new StandardWalletAdapter({wallet}));
+}
+    
 
 async function getWalletIconPng(iconDataUrl) {
     let iconDataUrlPng: string;
@@ -180,8 +192,8 @@ async function getWalletIconPng(iconDataUrl) {
 
 
 async function getWalletsData() {
-    initWallets();
     let walletsData: Array<WalletData> = [];
+    
     for (let wallet of walletAdapters) {
         let icon = await getWalletIconPng(wallet.icon);
         walletsData.push({
