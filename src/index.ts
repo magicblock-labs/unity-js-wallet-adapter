@@ -109,6 +109,34 @@ async function signMessage(adapter, messageStr): Promise<Uint8Array> {
     }
 }
 
+async function signAllTransactions(adapter, transactions ): Promise<any> {
+    if (!adapter || !adapter.connected){
+        console.error('Not connected');
+        return;
+    }
+
+    try {
+        if (adapter && 'signAllTransactions' in adapter){
+            const transactionsList = transactions.map((transactionStr) => {
+                const transactionBuffer = Buffer.from(transactionStr, 'base64');
+                const transaction = Transaction.from(transactionBuffer);
+                return transaction;
+            });
+            const signedTx = await adapter.signAllTransactions(transactionsList);
+            return signedTx
+
+        } else {
+            console.error('Signing not supported with this wallet');
+        }  
+    }
+    catch(error){
+        console.log(error);
+    }
+}
+
+
+
+
 
 declare global {
     interface Window {
@@ -120,6 +148,7 @@ declare global {
 interface WalletAdapterLibrary {
     connectWallet:  (walletName: string) => Promise<any>;
     signTransaction:  (walletName: string, transactionStr: string) => Promise<any>;
+    signAllTransactions:  (walletName: string, transactions: Array<string>) => Promise<any>;
     getWallets: () => Promise<any>;
     signMessage: (walletName: string, messageStr: string) => Promise<any>;
 }
@@ -152,12 +181,17 @@ async function signTransactionWallet(walletName, transactionStr) {
     return base64str;
 }
 
+async function signAllTransactionsWallet(walletName, transactions) {
+    let adapter = getWalletAdapterByName(walletName);
+    const base64str = await signAllTransactions(adapter, transactions);
+    return base64str;
+}
+
 async function signMessageWallet(walletName, messageStr) {
     let adapter = getWalletAdapterByName(walletName);
     const base64str = await signMessage(adapter, messageStr);
     return base64str;
 }
-
 
 function wrapWalletsInAdapters(
     wallets: ReadonlyArray<Wallet>,
@@ -208,9 +242,9 @@ async function getWalletsData() {
 const walletAdapterLib: WalletAdapterLibrary = {
     connectWallet: connectWallet,
     signTransaction: signTransactionWallet,
+    signAllTransactions: signAllTransactionsWallet,
     getWallets: getWalletsData,
-    signMessage: signMessageWallet,
-    
+    signMessage: signMessageWallet    
 };
 
 window.walletAdapterLib = walletAdapterLib;
