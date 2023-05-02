@@ -89,10 +89,11 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 
-/*! Case - v1.6.2 - 2020-03-24
-* Copyright (c) 2020 Nathan Bubna; Licensed MIT, GPL */
+/*! https://mths.be/punycode v1.3.2 by @mathias */
 
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
+
+/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 
 /*! noble-ed25519 - MIT License (c) 2019 Paul Miller (paulmillr.com) */
 
