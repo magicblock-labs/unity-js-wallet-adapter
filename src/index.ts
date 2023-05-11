@@ -118,8 +118,7 @@ async function signAllTransactions(adapter, transactions ): Promise<any> {
     try {
         if (adapter && 'signAllTransactions' in adapter){
             const transactionsList = transactions.map((transactionStr) => {
-                const transactionBuffer = Buffer.from(transactionStr, 'base64');
-                const transaction = Transaction.from(transactionBuffer);
+                const transaction = getTransactionFromStr(transactionStr);
                 return transaction;
             });
             const signedTx = await adapter.signAllTransactions(transactionsList);
@@ -134,10 +133,6 @@ async function signAllTransactions(adapter, transactions ): Promise<any> {
     }
 }
 
-
-
-
-
 declare global {
     interface Window {
         walletAdapterLib:any;
@@ -151,6 +146,7 @@ interface WalletAdapterLibrary {
     signAllTransactions:  (walletName: string, transactions: Array<string>) => Promise<any>;
     getWallets: () => Promise<any>;
     signMessage: (walletName: string, messageStr: string) => Promise<any>;
+    getTransactionFromStr: (transactionStr: string) => Transaction;
 }
 
 interface WalletData {
@@ -191,6 +187,11 @@ async function signMessageWallet(walletName, messageStr) {
     let adapter = getWalletAdapterByName(walletName);
     const base64str = await signMessage(adapter, messageStr);
     return base64str;
+}
+
+function getTransactionFromStr(transactionStr): Transaction {
+    const transactionBuffer = Buffer.from(transactionStr, 'base64');
+    return Transaction.from(transactionBuffer);
 }
 
 function wrapWalletsInAdapters(
@@ -244,7 +245,8 @@ const walletAdapterLib: WalletAdapterLibrary = {
     signTransaction: signTransactionWallet,
     signAllTransactions: signAllTransactionsWallet,
     getWallets: getWalletsData,
-    signMessage: signMessageWallet    
+    signMessage: signMessageWallet,
+    getTransactionFromStr: getTransactionFromStr
 };
 
 window.walletAdapterLib = walletAdapterLib;
