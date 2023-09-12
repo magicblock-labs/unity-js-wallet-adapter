@@ -1,21 +1,17 @@
 import {
     Adapter,
+    isWalletAdapterCompatibleStandardWallet,
     WalletNotReadyError,
     WalletReadyState,
-    isWalletAdapterCompatibleStandardWallet,
 } from '@solana/wallet-adapter-base';
-import {
-    StandardWalletAdapter,
-  } from "@solana/wallet-standard-wallet-adapter-base";
-import { 
-    Transaction
-} from '@solana/web3.js';
-import { getWallets } from "@wallet-standard/app";
-import type { Wallet } from "@wallet-standard/base";
-import { PhantomWalletAdapter, SolflareWalletAdapter  } from '@solana/wallet-adapter-wallets';
+import {StandardWalletAdapter,} from "@solana/wallet-standard-wallet-adapter-base";
+import {Transaction, VersionedTransaction} from '@solana/web3.js';
+import {getWallets} from "@wallet-standard/app";
+import type {Wallet} from "@wallet-standard/base";
+import {PhantomWalletAdapter, SolflareWalletAdapter} from '@solana/wallet-adapter-wallets';
 
 
-import { Canvg } from "canvg";
+import {Canvg} from "canvg";
 
 const defaultWalletAdapters: Array<Adapter> = [
     new PhantomWalletAdapter(),
@@ -77,13 +73,17 @@ async function signTransaction(adapter, transactionStr): Promise<any> {
     try {
         if (adapter && 'signTransaction' in adapter){
             const transactionBuffer = Buffer.from(transactionStr, 'base64');
-            const transaction = Transaction.from(transactionBuffer);
-            const signedTx = await adapter.signTransaction(transaction);
-            return signedTx
+            let transaction: Transaction | VersionedTransaction;
+            try{
+                transaction = Transaction.from(transactionBuffer);
+            }catch (e){
+                transaction = VersionedTransaction.deserialize(transactionBuffer);
+            }
+            return await adapter.signTransaction(transaction)
 
         } else {
             console.error('Signing not supported with this wallet');
-        }  
+        }
     } catch(error){
         console.log(error);
     }
@@ -103,7 +103,7 @@ async function signMessage(adapter, messageStr): Promise<Uint8Array> {
 
         } else {
             console.error('Signing not supported with this wallet');
-        }  
+        }
     } catch(error){
         console.log(error);
     }
@@ -126,7 +126,7 @@ async function signAllTransactions(adapter, transactions ): Promise<any> {
 
         } else {
             console.error('Signing not supported with this wallet');
-        }  
+        }
     }
     catch(error){
         console.log(error);
@@ -146,7 +146,7 @@ interface WalletAdapterLibrary {
     signAllTransactions:  (walletName: string, transactions: Array<string>) => Promise<any>;
     getWallets: () => Promise<any>;
     signMessage: (walletName: string, messageStr: string) => Promise<any>;
-    getTransactionFromStr: (transactionStr: string) => Transaction;
+    getTransactionFromStr: (transactionStr: string) => Transaction | VersionedTransaction;
 }
 
 interface WalletData {
@@ -189,9 +189,15 @@ async function signMessageWallet(walletName, messageStr) {
     return base64str;
 }
 
-function getTransactionFromStr(transactionStr): Transaction {
+function getTransactionFromStr(transactionStr): Transaction | VersionedTransaction {
     const transactionBuffer = Buffer.from(transactionStr, 'base64');
-    return Transaction.from(transactionBuffer);
+    let transaction: Transaction | VersionedTransaction;
+    try{
+        transaction = Transaction.from(transactionBuffer);
+    }catch (e){
+        transaction = VersionedTransaction.deserialize(transactionBuffer);
+    }
+    return transaction;
 }
 
 function wrapWalletsInAdapters(
@@ -201,7 +207,7 @@ function wrapWalletsInAdapters(
         .filter(isWalletAdapterCompatibleStandardWallet)
         .map((wallet) => new StandardWalletAdapter({wallet}));
 }
-    
+
 
 async function getWalletIconPng(iconDataUrl) {
     let iconDataUrlPng: string;
@@ -228,7 +234,7 @@ async function getWalletIconPng(iconDataUrl) {
 
 async function getWalletsData() {
     let walletsData: Array<WalletData> = [];
-    
+
     for (let wallet of walletAdapters) {
         let icon = await getWalletIconPng(wallet.icon);
         walletsData.push({
