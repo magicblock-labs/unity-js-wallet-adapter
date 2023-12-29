@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 module.exports = {
+  devtool: 'source-map',
   mode: 'production',
   entry: ['./src/index.ts'],
   output: {
@@ -16,6 +17,16 @@ module.exports = {
     new webpack.ProvidePlugin({
       process: 'process/browser',
     }),
+    //new webpack.HotModuleReplacementPlugin(),
+    //new webpack.NoErrorsPlugin(),
+    //new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+    // new webpack.DefinePlugin({
+    //   'process.env': {
+    //     // This has effect on the react lib size
+    //     'NODE_ENV': JSON.stringify('production'),
+    //   }
+    // }),
+    //new webpack.optimize.UglifyJsPlugin(),
     new NodePolyfillPlugin(),
   ],
   module: {
@@ -23,7 +34,7 @@ module.exports = {
       {
         test: /\.ts?$/,
         use: 'ts-loader',
-        exclude: /node_modules/,
+        exclude: /(node_modules|bower_components)/,
       },
     ],
   },
@@ -33,5 +44,9 @@ module.exports = {
       buffer: require.resolve('buffer/'),
       assert: require.resolve("assert/")
     },
-  }
+  },
+  optimization: {
+    minimize: true,
+    //minimizer: [new TerserPlugin()],
+  },
 };
