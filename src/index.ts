@@ -1,6 +1,6 @@
 import {
     Adapter,
-    isWalletAdapterCompatibleStandardWallet,
+    isWalletAdapterCompatibleStandardWallet, WalletAdapterNetwork,
     WalletNotReadyError,
     WalletReadyState,
 } from '@solana/wallet-adapter-base';
@@ -9,13 +9,30 @@ import {Transaction, VersionedTransaction} from '@solana/web3.js';
 import {getWallets} from "@wallet-standard/app";
 import type {Wallet} from "@wallet-standard/base";
 import {PhantomWalletAdapter, SolflareWalletAdapter} from '@solana/wallet-adapter-wallets';
-
+import {
+    createDefaultAddressSelector,
+    createDefaultAuthorizationResultCache,
+    createDefaultWalletNotFoundHandler,
+    SolanaMobileWalletAdapter
+} from "@solana-mobile/wallet-adapter-mobile";
 
 import {Canvg} from "canvg";
+
 
 const defaultWalletAdapters: Array<Adapter> = [
     new PhantomWalletAdapter(),
     new SolflareWalletAdapter(),
+    new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
+        appIdentity: {
+            name: 'My app',
+            uri: 'https://myapp.io',
+            icon: 'relative/path/to/icon.png',
+        },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: WalletAdapterNetwork.Devnet,
+        onWalletNotFound: createDefaultWalletNotFoundHandler(),
+    }),
 ];
 
 const { get, on } = getWallets();

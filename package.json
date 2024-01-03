@@ -13,6 +13,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@solana-mobile/wallet-adapter-mobile": "^2.0.1",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-phantom": "^0.9.24",
     "@solana/wallet-adapter-wallets": "^0.19.24",
