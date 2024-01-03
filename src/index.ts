@@ -26,7 +26,7 @@ const defaultWalletAdapters: Array<Adapter> = [
         addressSelector: createDefaultAddressSelector(),
         appIdentity: {
             name: 'My app',
-            uri: 'https://myapp.io',
+            uri: 'https://my-app.com',
             icon: 'relative/path/to/icon.png',
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
