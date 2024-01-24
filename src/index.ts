@@ -1,258 +1,310 @@
 import {
-    Adapter,
-    isWalletAdapterCompatibleStandardWallet,
-    WalletNotReadyError,
-    WalletReadyState,
-} from '@solana/wallet-adapter-base';
-import {StandardWalletAdapter,} from "@solana/wallet-standard-wallet-adapter-base";
-import {Transaction, VersionedTransaction} from '@solana/web3.js';
-import {getWallets} from "@wallet-standard/app";
-import type {Wallet} from "@wallet-standard/base";
-import {PhantomWalletAdapter, SolflareWalletAdapter} from '@solana/wallet-adapter-wallets';
+  Adapter,
+  isWalletAdapterCompatibleStandardWallet,
+  WalletNotReadyError,
+  WalletReadyState,
+} from "@solana/wallet-adapter-base";
+import { StandardWalletAdapter } from "@solana/wallet-standard-wallet-adapter-base";
+import { Cluster, Transaction, VersionedTransaction } from "@solana/web3.js";
+import { getWallets } from "@wallet-standard/app";
+import type { Wallet } from "@wallet-standard/base";
+import {
+  SolflareWalletAdapter,
+  PhantomWalletAdapter,
+} from "@solana/wallet-adapter-wallets";
+import {
+  createDefaultAddressSelector,
+  createDefaultAuthorizationResultCache,
+  createDefaultWalletNotFoundHandler,
+  SolanaMobileWalletAdapter,
+  SolanaMobileWalletAdapterWalletName,
+} from "@solana-mobile/wallet-adapter-mobile";
 
-
-import {Canvg} from "canvg";
+import { Canvg } from "canvg";
+import getIsMobile from "./environtment";
 
 const defaultWalletAdapters: Array<Adapter> = [
-    new PhantomWalletAdapter(),
-    new SolflareWalletAdapter(),
+  new PhantomWalletAdapter(),
+  new SolflareWalletAdapter(),
 ];
 
-const { get, on } = getWallets();
-let walletAdapters : Array<Adapter> = getWalletAdapters();
-
-function getWalletAdapters () : Array<Adapter> {
-    let standardAdapters = wrapWalletsInAdapters(get());
-    let adapters =  defaultWalletAdapters.filter((adapter) => !standardAdapters.some((wallet) => wallet.name === adapter.name));
-    return [...adapters, ...standardAdapters] as Array<Adapter>;
+function getUriForAppIdentity() {
+  const location = globalThis.location;
+  if (!location) return;
+  return `${location.protocol}//${location.host}`;
 }
 
-on('register', (...wallets) => {
-    walletAdapters = [ ...walletAdapters, ...wrapWalletsInAdapters(wallets) ];
+function getMobileWalletAdapter(adapters: Array<Adapter>): Adapter {
+  if (!getIsMobile(adapters)) {
+    console.log("Not mobile");
+    return null;
+  }
+  const existingMobileWalletAdapter = adapters.find(
+    (adapter) => adapter.name === SolanaMobileWalletAdapterWalletName
+  );
+  if (existingMobileWalletAdapter) {
+    return existingMobileWalletAdapter;
+  }
+  return new SolanaMobileWalletAdapter({
+    addressSelector: createDefaultAddressSelector(),
+    appIdentity: {
+      uri: getUriForAppIdentity(),
+    },
+    cluster: window.rpcCluster,
+    authorizationResultCache: createDefaultAuthorizationResultCache(),
+    onWalletNotFound: createDefaultWalletNotFoundHandler(),
+  });
+}
+
+const { get, on } = getWallets();
+let walletAdapters: Array<Adapter> = getWalletAdapters();
+
+function getWalletAdapters(): Array<Adapter> {
+  const standardAdapters = wrapWalletsInAdapters(get());
+  const adaptersWithStandardAdapters = [
+    ...defaultWalletAdapters.filter(
+      (adapter) =>
+        !standardAdapters.some((wallet) => wallet.name === adapter.name)
+    ),
+    ...standardAdapters,
+  ] as Array<Adapter>;
+  const mobileWalletAdapter = getMobileWalletAdapter(
+    adaptersWithStandardAdapters
+  );
+  if (
+    mobileWalletAdapter == null ||
+    adaptersWithStandardAdapters.indexOf(mobileWalletAdapter) !== -1
+  ) {
+    return adaptersWithStandardAdapters;
+  }
+  return [mobileWalletAdapter, ...adaptersWithStandardAdapters];
+}
+
+on("register", (...wallets) => {
+  walletAdapters = [...walletAdapters, ...wrapWalletsInAdapters(wallets)];
 });
-on('unregister', (...wallets) => {
-    walletAdapters = walletAdapters.filter((adapter) => wallets.some((wallet) => wallet.name === adapter.name));
+on("unregister", (...wallets) => {
+  walletAdapters = walletAdapters.filter((adapter) =>
+    wallets.some((wallet) => wallet.name === adapter.name)
+  );
 });
 
-
-
-const canvas: HTMLCanvasElement = document.createElement('canvas');
-canvas.style.visibility = 'hidden';
-
+const canvas: HTMLCanvasElement = document.createElement("canvas");
+canvas.style.visibility = "hidden";
 
 async function connect(adapter): Promise<any> {
-    if (adapter.connecting || adapter.connected){
-        return;
+  if (adapter.connecting || adapter.connected) {
+    return;
+  }
+
+  const readyState = adapter?.readyState;
+
+  if (
+    !(
+      readyState === WalletReadyState.Installed ||
+      readyState === WalletReadyState.Loadable
+    )
+  ) {
+    if (typeof window !== "undefined") {
+      window.open(adapter.url, "_blank");
     }
 
-	const readyState = adapter?.readyState;
+    throw new WalletNotReadyError();
+  }
 
-	if (!(readyState === WalletReadyState.Installed || readyState === WalletReadyState.Loadable)) {
-
-        if (typeof window !== 'undefined') {
-            window.open(adapter.url, '_blank');
-        }
-
-        throw new WalletNotReadyError();
-    }
-
-    try {
-        await adapter.connect();
-        return adapter;
-    } catch (error) {
-        console.error('Wallet error: [' + adapter.name + '], error: [' + error + ']');
-    }
+  try {
+    await adapter.connect();
+    return adapter;
+  } catch (error) {
+    console.error(
+      "Wallet error: [" + adapter.name + "], error: [" + error + "]"
+    );
+  }
 }
 
 async function signTransaction(adapter, transactionStr): Promise<any> {
-    if (!adapter || !adapter.connected){
-        console.error('Not connected');
-        return;
-    }
+  if (!adapter || !adapter.connected) {
+    console.error("Not connected");
+    return;
+  }
 
-    try {
-        if (adapter && 'signTransaction' in adapter){
-            const transactionBuffer = Buffer.from(transactionStr, 'base64');
-            let transaction: Transaction | VersionedTransaction;
-            try{
-                transaction = Transaction.from(transactionBuffer);
-            }catch (e){
-                transaction = VersionedTransaction.deserialize(transactionBuffer);
-            }
-            return await adapter.signTransaction(transaction)
-
-        } else {
-            console.error('Signing not supported with this wallet');
-        }
-    } catch(error){
-        console.log(error);
+  try {
+    if (adapter && "signTransaction" in adapter) {
+      const transactionBuffer = Buffer.from(transactionStr, "base64");
+      let transaction: Transaction | VersionedTransaction;
+      try {
+        transaction = Transaction.from(transactionBuffer);
+      } catch (e) {
+        transaction = VersionedTransaction.deserialize(transactionBuffer);
+      }
+      return await adapter.signTransaction(transaction);
+    } else {
+      console.error("Signing not supported with this wallet");
     }
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 async function signMessage(adapter, messageStr): Promise<Uint8Array> {
-    if (!adapter || !adapter.connected){
-        console.error('Not connected');
-        return;
-    }
+  if (!adapter || !adapter.connected) {
+    console.error("Not connected");
+    return;
+  }
 
-    try {
-        if (adapter && 'signMessage' in adapter){
-            const message = new TextEncoder().encode(messageStr);
-            const signature: Uint8Array = await adapter.signMessage(message);
-            return signature
-
-        } else {
-            console.error('Signing not supported with this wallet');
-        }
-    } catch(error){
-        console.log(error);
+  try {
+    if (adapter && "signMessage" in adapter) {
+      const message = new TextEncoder().encode(messageStr);
+      const signature: Uint8Array = await adapter.signMessage(message);
+      return signature;
+    } else {
+      console.error("Signing not supported with this wallet");
     }
+  } catch (error) {
+    console.log(error);
+  }
 }
 
-async function signAllTransactions(adapter, transactions ): Promise<any> {
-    if (!adapter || !adapter.connected){
-        console.error('Not connected');
-        return;
-    }
+async function signAllTransactions(adapter, transactions): Promise<any> {
+  if (!adapter || !adapter.connected) {
+    console.error("Not connected");
+    return;
+  }
 
-    try {
-        if (adapter && 'signAllTransactions' in adapter){
-            const transactionsList = transactions.map((transactionStr) => {
-                const transaction = getTransactionFromStr(transactionStr);
-                return transaction;
-            });
-            const signedTx = await adapter.signAllTransactions(transactionsList);
-            return signedTx
-
-        } else {
-            console.error('Signing not supported with this wallet');
-        }
+  try {
+    if (adapter && "signAllTransactions" in adapter) {
+      const transactionsList = transactions.map((transactionStr) => {
+        const transaction = getTransactionFromStr(transactionStr);
+        return transaction;
+      });
+      const signedTx = await adapter.signAllTransactions(transactionsList);
+      return signedTx;
+    } else {
+      console.error("Signing not supported with this wallet");
     }
-    catch(error){
-        console.log(error);
-    }
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 declare global {
-    interface Window {
-        walletAdapterLib:any;
-        currentAdapter:any;
-    }
+  interface Window {
+    walletAdapterLib: WalletAdapterLibrary;
+    rpcCluster: Cluster;
+  }
 }
 
 interface WalletAdapterLibrary {
-    connectWallet:  (walletName: string) => Promise<any>;
-    signTransaction:  (walletName: string, transactionStr: string) => Promise<any>;
-    signAllTransactions:  (walletName: string, transactions: Array<string>) => Promise<any>;
-    getWallets: () => Promise<any>;
-    signMessage: (walletName: string, messageStr: string) => Promise<any>;
-    getTransactionFromStr: (transactionStr: string) => Transaction | VersionedTransaction;
+  connectWallet: (walletName: string) => Promise<any>;
+  signTransaction: (walletName: string, transactionStr: string) => Promise<any>;
+  signAllTransactions: (
+    walletName: string,
+    transactions: Array<string>
+  ) => Promise<any>;
+  getWallets: () => Promise<any>;
+  signMessage: (walletName: string, messageStr: string) => Promise<any>;
+  getTransactionFromStr: (
+    transactionStr: string
+  ) => Transaction | VersionedTransaction;
 }
 
 interface WalletData {
-    name: string;
-    installed: boolean;
-    icon: string;
+  name: string;
+  installed: boolean;
+  icon: string;
 }
 
 function getWalletAdapterByName(walletName) {
-    let walletIndex = walletAdapters.findIndex(x => x.name === walletName);
-    if (walletIndex === -1) {
-        return null;
-    }
-    return walletAdapters[walletIndex];
+  let walletIndex = walletAdapters.findIndex((x) => x.name === walletName);
+  if (walletIndex === -1) {
+    return null;
+  }
+  return walletAdapters[walletIndex];
 }
 
 async function connectWallet(walletName) {
-    let adapter = getWalletAdapterByName(walletName);
-    await connect(adapter);
-    if (adapter && adapter.publicKey) {
-        return adapter.publicKey.toString();
-    }
+  let adapter = getWalletAdapterByName(walletName);
+  await connect(adapter);
+  if (adapter && adapter.publicKey) {
+    return adapter.publicKey.toString();
+  }
 }
 
 async function signTransactionWallet(walletName, transactionStr) {
-    let adapter = getWalletAdapterByName(walletName);
-    const base64str = await signTransaction(adapter, transactionStr);
-    return base64str;
+  let adapter = getWalletAdapterByName(walletName);
+  const base64str = await signTransaction(adapter, transactionStr);
+  return base64str;
 }
 
 async function signAllTransactionsWallet(walletName, transactions) {
-    let adapter = getWalletAdapterByName(walletName);
-    const base64str = await signAllTransactions(adapter, transactions);
-    return base64str;
+  let adapter = getWalletAdapterByName(walletName);
+  const base64str = await signAllTransactions(adapter, transactions);
+  return base64str;
 }
 
 async function signMessageWallet(walletName, messageStr) {
-    let adapter = getWalletAdapterByName(walletName);
-    const base64str = await signMessage(adapter, messageStr);
-    return base64str;
+  let adapter = getWalletAdapterByName(walletName);
+  const base64str = await signMessage(adapter, messageStr);
+  return base64str;
 }
 
-function getTransactionFromStr(transactionStr): Transaction | VersionedTransaction {
-    const transactionBuffer = Buffer.from(transactionStr, 'base64');
-    let transaction: Transaction | VersionedTransaction;
-    try{
-        transaction = Transaction.from(transactionBuffer);
-    }catch (e){
-        transaction = VersionedTransaction.deserialize(transactionBuffer);
-    }
-    return transaction;
+function getTransactionFromStr(
+  transactionStr
+): Transaction | VersionedTransaction {
+  const transactionBuffer = Buffer.from(transactionStr, "base64");
+  let transaction: Transaction | VersionedTransaction;
+  try {
+    transaction = Transaction.from(transactionBuffer);
+  } catch (e) {
+    transaction = VersionedTransaction.deserialize(transactionBuffer);
+  }
+  return transaction;
 }
 
 function wrapWalletsInAdapters(
-    wallets: ReadonlyArray<Wallet>,
-  ): Array<StandardWalletAdapter> {
-    return wallets
-        .filter(isWalletAdapterCompatibleStandardWallet)
-        .map((wallet) => new StandardWalletAdapter({wallet}));
+  wallets: ReadonlyArray<Wallet>
+): Array<StandardWalletAdapter> {
+  return wallets
+    .filter(isWalletAdapterCompatibleStandardWallet)
+    .map((wallet) => new StandardWalletAdapter({ wallet }));
 }
-
 
 async function getWalletIconPng(iconDataUrl) {
-    let iconDataUrlPng: string;
-    // When the icon format is SVG, we need to convert it to PNG
-    if (iconDataUrl.startsWith('data:image/svg+xml')) {
-        const context = canvas.getContext('2d');
-        const svg = await Canvg.from(
-            context,
-            iconDataUrl
-          );
-        await svg.render();
-        iconDataUrlPng = canvas.toDataURL();
-    }
-    else {
-        iconDataUrlPng = iconDataUrl;
-    }
-    // Remove Encoding prefix
-    return iconDataUrlPng.replace(/^data:image\/\w+;base64,/, '');
+  let iconDataUrlPng: string;
+  // When the icon format is SVG, we need to convert it to PNG
+  if (iconDataUrl.startsWith("data:image/svg+xml")) {
+    const context = canvas.getContext("2d");
+    const svg = await Canvg.from(context, iconDataUrl);
+    await svg.render();
+    iconDataUrlPng = canvas.toDataURL();
+  } else {
+    iconDataUrlPng = iconDataUrl;
+  }
+  // Remove Encoding prefix
+  return iconDataUrlPng.replace(/^data:image\/\w+;base64,/, "");
 }
 
-
-
-
-
 async function getWalletsData() {
-    let walletsData: Array<WalletData> = [];
+  let walletsData: Array<WalletData> = [];
 
-    for (let wallet of walletAdapters) {
-        let icon = await getWalletIconPng(wallet.icon);
-        walletsData.push({
-            name: wallet.name,
-            installed: wallet.readyState == WalletReadyState.Installed,
-            icon: icon
-        });
-    }
-    return JSON.stringify({wallets:walletsData});
+  for (let wallet of walletAdapters) {
+    let icon = await getWalletIconPng(wallet.icon);
+    walletsData.push({
+      name: wallet.name,
+      installed: wallet.readyState == WalletReadyState.Installed,
+      icon: icon,
+    });
+  }
+  return JSON.stringify({ wallets: walletsData });
 }
 
 const walletAdapterLib: WalletAdapterLibrary = {
-    connectWallet: connectWallet,
-    signTransaction: signTransactionWallet,
-    signAllTransactions: signAllTransactionsWallet,
-    getWallets: getWalletsData,
-    signMessage: signMessageWallet,
-    getTransactionFromStr: getTransactionFromStr
+  connectWallet: connectWallet,
+  signTransaction: signTransactionWallet,
+  signAllTransactions: signAllTransactionsWallet,
+  getWallets: getWalletsData,
+  signMessage: signMessageWallet,
+  getTransactionFromStr: getTransactionFromStr,
 };
 
 window.walletAdapterLib = walletAdapterLib;

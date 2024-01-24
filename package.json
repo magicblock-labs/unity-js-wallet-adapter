@@ -9,16 +9,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^20.10.8",
     "typescript": "^5.3.3",
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@solana-mobile/wallet-adapter-mobile": "^2.0.3",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-phantom": "^0.9.24",
-    "@solana/wallet-adapter-wallets": "^0.19.24",
+    "@solana/wallet-adapter-wallets": "^0.19.25",
     "@solana/wallet-standard-wallet-adapter-base": "^1.1.1",
     "@solana/web3.js": "^1.87.6",
     "@wallet-standard/app": "^1.0.1",
+    "@wallet-standard/base": "^1.0.1",
     "buffer": "^6.0.3",
     "canvg": "^4.0.1",
     "node-polyfill-webpack-plugin": "^2.0.1",
