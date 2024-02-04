@@ -1,6 +1,6 @@
 {
   "name": "unity-wallet-adapter",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "",
   "scripts": {
     "build": "webpack"
@@ -14,14 +14,15 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "@solana-mobile/wallet-adapter-mobile": "^2.0.3",
+    "@solana-mobile/wallet-adapter-mobile": "^2.1.1",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-phantom": "^0.9.24",
-    "@solana/wallet-adapter-wallets": "^0.19.25",
+    "@solana/wallet-adapter-wallets": "^0.19.26",
     "@solana/wallet-standard-wallet-adapter-base": "^1.1.1",
-    "@solana/web3.js": "^1.87.6",
+    "@solana/web3.js": "^1.89.1",
     "@wallet-standard/app": "^1.0.1",
     "@wallet-standard/base": "^1.0.1",
+    "@wallet-standard/core": "^1.0.3",
     "buffer": "^6.0.3",
     "canvg": "^4.0.1",
     "node-polyfill-webpack-plugin": "^2.0.1",

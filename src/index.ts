@@ -36,7 +36,11 @@ function getUriForAppIdentity() {
 
 function getMobileWalletAdapter(adapters: Array<Adapter>): Adapter {
   if (!getIsMobile(adapters)) {
-    console.log("Not mobile");
+    console.log("MobileWalletAdapter: Not mobile");
+    return null;
+  }
+  if (!window.rpcCluster) {
+    console.log("MobileWalletAdapter: rpcCluster not set");
     return null;
   }
   const existingMobileWalletAdapter = adapters.find(
@@ -57,7 +61,6 @@ function getMobileWalletAdapter(adapters: Array<Adapter>): Adapter {
 }
 
 const { get, on } = getWallets();
-let walletAdapters: Array<Adapter> = getWalletAdapters();
 
 function getWalletAdapters(): Array<Adapter> {
   const standardAdapters = wrapWalletsInAdapters(get());
@@ -79,6 +82,8 @@ function getWalletAdapters(): Array<Adapter> {
   }
   return [mobileWalletAdapter, ...adaptersWithStandardAdapters];
 }
+
+let walletAdapters: Array<Adapter> = getWalletAdapters();
 
 on("register", (...wallets) => {
   walletAdapters = [...walletAdapters, ...wrapWalletsInAdapters(wallets)];
@@ -187,6 +192,10 @@ async function signAllTransactions(adapter, transactions): Promise<any> {
   }
 }
 
+function refreshWalletAdapters() {
+  walletAdapters = getWalletAdapters();
+}
+
 declare global {
   interface Window {
     walletAdapterLib: WalletAdapterLibrary;
@@ -195,6 +204,7 @@ declare global {
 }
 
 interface WalletAdapterLibrary {
+  refreshWalletAdapters: () => void;
   connectWallet: (walletName: string) => Promise<any>;
   signTransaction: (walletName: string, transactionStr: string) => Promise<any>;
   signAllTransactions: (
@@ -299,6 +309,7 @@ async function getWalletsData() {
 }
 
 const walletAdapterLib: WalletAdapterLibrary = {
+  refreshWalletAdapters: refreshWalletAdapters,
   connectWallet: connectWallet,
   signTransaction: signTransactionWallet,
   signAllTransactions: signAllTransactionsWallet,
