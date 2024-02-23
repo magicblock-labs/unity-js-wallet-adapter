@@ -1,13 +1,22 @@
 {
-  "name": "unity-wallet-adapter",
-  "version": "1.2.0",
-  "description": "",
+  "name": "@magicblock-labs/unity-wallet-adapter",
+  "version": "1.2.1",
+  "description": "Solana Wallet Adapter for Unity WebGL, to be used with the Solana-Unity.SDK",
   "scripts": {
-    "build": "webpack"
+    "build": "rm -rf dist && webpack"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Magicblock Labs dev@magicblock.gg",
+  "license": "MIT",
+  "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magicblock-labs/unity-js-wallet-adapter"
+  },
   "devDependencies": {
     "@types/node": "^20.10.8",
     "typescript": "^5.3.3",
@@ -29,5 +38,9 @@
     "process": "^0.11.10",
     "ts-loader": "^9.4.2",
     "webpack": "^5.89.0"
-  }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "lib/wallet-adapter-lib.js"
 }

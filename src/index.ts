@@ -4,14 +4,11 @@ import {
   WalletNotReadyError,
   WalletReadyState,
 } from "@solana/wallet-adapter-base";
-import { StandardWalletAdapter } from "@solana/wallet-standard-wallet-adapter-base";
-import { Cluster, Transaction, VersionedTransaction } from "@solana/web3.js";
-import { getWallets } from "@wallet-standard/app";
-import type { Wallet } from "@wallet-standard/base";
-import {
-  SolflareWalletAdapter,
-  PhantomWalletAdapter,
-} from "@solana/wallet-adapter-wallets";
+import {StandardWalletAdapter} from "@solana/wallet-standard-wallet-adapter-base";
+import {Cluster, Transaction, VersionedTransaction} from "@solana/web3.js";
+import {getWallets} from "@wallet-standard/app";
+import type {Wallet} from "@wallet-standard/base";
+import {PhantomWalletAdapter, SolflareWalletAdapter,} from "@solana/wallet-adapter-wallets";
 import {
   createDefaultAddressSelector,
   createDefaultAuthorizationResultCache,
@@ -20,7 +17,7 @@ import {
   SolanaMobileWalletAdapterWalletName,
 } from "@solana-mobile/wallet-adapter-mobile";
 
-import { Canvg } from "canvg";
+import {Canvg} from "canvg";
 import getIsMobile from "./environtment";
 
 const defaultWalletAdapters: Array<Adapter> = [
@@ -151,7 +148,7 @@ async function signTransaction(adapter, transactionStr): Promise<any> {
   }
 }
 
-async function signMessage(adapter, messageStr): Promise<Uint8Array> {
+async function signMessage(adapter, messageStr): Promise<any> {
   if (!adapter || !adapter.connected) {
     console.error("Not connected");
     return;
@@ -160,8 +157,7 @@ async function signMessage(adapter, messageStr): Promise<Uint8Array> {
   try {
     if (adapter && "signMessage" in adapter) {
       const message = new TextEncoder().encode(messageStr);
-      const signature: Uint8Array = await adapter.signMessage(message);
-      return signature;
+      return await adapter.signMessage(message);
     } else {
       console.error("Signing not supported with this wallet");
     }
@@ -179,11 +175,9 @@ async function signAllTransactions(adapter, transactions): Promise<any> {
   try {
     if (adapter && "signAllTransactions" in adapter) {
       const transactionsList = transactions.map((transactionStr) => {
-        const transaction = getTransactionFromStr(transactionStr);
-        return transaction;
+        return getTransactionFromStr(transactionStr);
       });
-      const signedTx = await adapter.signAllTransactions(transactionsList);
-      return signedTx;
+      return await adapter.signAllTransactions(transactionsList);
     } else {
       console.error("Signing not supported with this wallet");
     }
@@ -242,20 +236,17 @@ async function connectWallet(walletName) {
 
 async function signTransactionWallet(walletName, transactionStr) {
   let adapter = getWalletAdapterByName(walletName);
-  const base64str = await signTransaction(adapter, transactionStr);
-  return base64str;
+  return await signTransaction(adapter, transactionStr);
 }
 
 async function signAllTransactionsWallet(walletName, transactions) {
   let adapter = getWalletAdapterByName(walletName);
-  const base64str = await signAllTransactions(adapter, transactions);
-  return base64str;
+  return await signAllTransactions(adapter, transactions);
 }
 
 async function signMessageWallet(walletName, messageStr) {
   let adapter = getWalletAdapterByName(walletName);
-  const base64str = await signMessage(adapter, messageStr);
-  return base64str;
+  return await signMessage(adapter, messageStr);
 }
 
 function getTransactionFromStr(
