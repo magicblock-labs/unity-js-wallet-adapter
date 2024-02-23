@@ -42,5 +42,5 @@
   "files": [
     "dist"
   ],
-  "main": "lib/wallet-adapter-lib.js"
+  "main": "dist/wallet-adapter-lib.js"
 }
